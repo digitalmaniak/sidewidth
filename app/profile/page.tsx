@@ -49,7 +49,7 @@ async function getProfileData(userId: string) {
         .order('created_at', { ascending: false })
 
     // Fetch all votes for these posts to calculate community stats
-    const postIds = votes?.map(v => v.post.id) || []
+    const postIds = votes?.map((v: any) => v.post?.id) || []
 
     // We can't easily join aggregated stats in the above query without a view/RPC.
     // So we'll fetch raw votes for these posts and aggregate in JS (MVP style).
