@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SideWidth | The distance between two sides",
-  description: "An anonymous consensus engine to measure local public opinion.",
+  title: "SideWidth | Who do you side with?",
+  description: "An anonymous consensus engine to measure local public opinions.",
 };
 
 export default function RootLayout({
