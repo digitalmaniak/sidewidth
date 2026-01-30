@@ -72,7 +72,7 @@ async function getProfileData(userId: string) {
     }
 
     // Attach stats to the votes list
-    const votesWithStats = votes?.map(vote => {
+    const votesWithStats = votes?.map((vote: any) => {
         const stats = postStats.get(vote.post.id) || { count: 0, sum: 0, min: 0, max: 0 }
         const average = stats.count > 0 ? stats.sum / stats.count : 0
         return {
