@@ -38,7 +38,7 @@ export async function signup(formData: FormData) {
     const { data: authData, error } = await supabase.auth.signUp({
         ...data,
         options: {
-            emailRedirectTo: `${origin}/auth/callback`,
+            emailRedirectTo: 'https://sidewidth.com/auth/callback',
         },
     })
 
