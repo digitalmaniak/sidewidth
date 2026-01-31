@@ -1,11 +1,11 @@
 'use client'
 
 import { createPost } from '@/app/actions'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { Loader2, MapPin } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 
-export default function CreatePage() {
+function CreateForm() {
     const searchParams = useSearchParams()
     const message = searchParams.get('message')
 
@@ -132,6 +132,14 @@ export default function CreatePage() {
                 </div>
             </form>
         </div>
+    )
+}
+
+export default function CreatePage() {
+    return (
+        <Suspense fallback={<div className="p-12 text-center text-white/50">Loading form...</div>}>
+            <CreateForm />
+        </Suspense>
     )
 }
 
