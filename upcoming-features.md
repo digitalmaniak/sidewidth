@@ -17,3 +17,5 @@ instead of "consensus reached", show the actual average and standard deviation~~
 ## 6. Short sides Long description
 expand on the short choices with sentences or even paragraphs
 
+## 7. Global vs local toggle
+allow users to toggle between global and local feed 

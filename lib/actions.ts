@@ -4,8 +4,9 @@ import { createClient } from "@/lib/supabase/server"
 
 export async function getNearbyPosts(lat: number, long: number, distKm: number = 50) {
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    const { data, error } = await supabase.rpc('get_nearby_posts', {
+    const { data: posts, error } = await supabase.rpc('get_nearby_posts', {
         user_lat: lat,
         user_long: long,
         dist_km: distKm
@@ -16,7 +17,52 @@ export async function getNearbyPosts(lat: number, long: number, distKm: number =
         return []
     }
 
-    return data
+    if (!posts || posts.length === 0) {
+        return []
+    }
+
+    const postIds = posts.map((p: any) => p.id)
+
+    // Fetch votes for these posts
+    const { data: votes } = await supabase
+        .from('votes')
+        .select('post_id, value, user_id')
+        .in('post_id', postIds)
+
+    // Calculate stats per post
+    const postStats = new Map<string, { count: number, sum: number, sqSum: number }>()
+    const userVotesMap = new Map<string, number>()
+
+    if (votes) {
+        votes.forEach(v => {
+            // Stats
+            const stats = postStats.get(v.post_id) || { count: 0, sum: 0, sqSum: 0 }
+            stats.count++
+            stats.sum += v.value
+            stats.sqSum += v.value * v.value
+            postStats.set(v.post_id, stats)
+
+            // User vote
+            if (user && v.user_id === user.id) {
+                userVotesMap.set(v.post_id, v.value)
+            }
+        })
+    }
+
+    return posts.map((post: any) => {
+        const stats = postStats.get(post.id) || { count: 0, sum: 0, sqSum: 0 }
+        const average = stats.count > 0 ? stats.sum / stats.count : 0
+        const variance = stats.count > 0 ? (stats.sqSum / stats.count) - (average * average) : 0
+        const stdDev = Math.sqrt(Math.max(0, variance))
+
+        return {
+            ...post,
+            userVote: userVotesMap.get(post.id) || 0,
+            voteCount: stats.count,
+            voteAverage: average,
+            voteStdDev: stdDev
+        }
+    })
 }
 
 export async function getAllPosts() {

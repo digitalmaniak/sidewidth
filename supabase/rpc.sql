@@ -34,11 +34,13 @@ begin
     p.location_name,
     (
       6371000 * acos(
-        cos(radians(user_lat)) *
-        cos(radians(p.lat)) *
-        cos(radians(p.long) - radians(user_long)) +
-        sin(radians(user_lat)) *
-        sin(radians(p.lat))
+        least(1.0, greatest(-1.0, 
+          cos(radians(user_lat)) *
+          cos(radians(p.lat)) *
+          cos(radians(p.long) - radians(user_long)) +
+          sin(radians(user_lat)) *
+          sin(radians(p.lat))
+        ))
       )
     ) as dist_meters
   from
@@ -46,11 +48,13 @@ begin
   where
     (
       6371000 * acos(
-        cos(radians(user_lat)) *
-        cos(radians(p.lat)) *
-        cos(radians(p.long) - radians(user_long)) +
-        sin(radians(user_lat)) *
-        sin(radians(p.lat))
+        least(1.0, greatest(-1.0, 
+          cos(radians(user_lat)) *
+          cos(radians(p.lat)) *
+          cos(radians(p.long) - radians(user_long)) +
+          sin(radians(user_lat)) *
+          sin(radians(p.lat))
+        ))
       )
     ) < (dist_km * 1000)
   order by

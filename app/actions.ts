@@ -68,7 +68,31 @@ export async function createPost(formData: FormData) {
     const side_a = formData.get('side_a') as string
     const side_b = formData.get('side_b') as string
     const category = formData.get('category') as string
-    // Optional: lat/long/location_name could be added here if we gather them
+
+    // Parse location if available
+    const latStr = formData.get('lat') as string
+    const longStr = formData.get('long') as string
+    const lat = latStr ? parseFloat(latStr) : null
+    const long = longStr ? parseFloat(longStr) : null
+
+    let location_name = null
+
+    if (lat && long) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${long}`, {
+                headers: {
+                    'User-Agent': 'SideWidth/1.0'
+                }
+            })
+            if (res.ok) {
+                const data = await res.json()
+                const addr = data.address
+                location_name = addr.city || addr.town || addr.village || addr.county || addr.state || "Unknown Location"
+            }
+        } catch (e) {
+            console.error("Error reverse geocoding:", e)
+        }
+    }
 
     if (!side_a || !side_b || !category) {
         redirect('/create?message=Missing+Required+Fields')
@@ -105,7 +129,10 @@ export async function createPost(formData: FormData) {
             side_a,
             side_b,
             category,
-            created_by: user.id
+            created_by: user.id,
+            lat,
+            long,
+            location_name
         })
 
     if (error) {

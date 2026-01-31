@@ -16,7 +16,7 @@ export default async function Home() {
         SideWidth
       </h1>
       <p className="text-sm text-gray-500 mb-8 z-10 text-center px-4">
-        An anonymous consensus engine to measure the distance between two sides.
+        An anonymous consensus engine to measure local public opinions. Who do you side with?
       </p>
 
       <FeedList user={user} />
