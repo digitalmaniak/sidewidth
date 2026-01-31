@@ -47,18 +47,6 @@ export function FeedList({ user }: FeedListProps) {
 
     return (
         <div className="space-y-6 w-full max-w-2xl px-4 pb-24">
-            {user && (
-                <Link
-                    href="/create"
-                    className="w-full flex items-center justify-center gap-2 p-4 mb-6 rounded-2xl bg-gradient-to-r from-blue-600/20 to-pink-600/20 border border-white/10 hover:border-white/20 transition-all group"
-                >
-                    <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Plus className="h-5 w-5 text-white" />
-                    </div>
-                    <span className="font-bold text-lg">Start New Argument</span>
-                </Link>
-            )}
-
             {/* Feed Toggle */}
             <div className="flex justify-center mb-8">
                 <div className="flex bg-black/20 backdrop-blur-md p-1 rounded-full border border-white/5">
@@ -88,6 +76,18 @@ export function FeedList({ user }: FeedListProps) {
                     </button>
                 </div>
             </div>
+
+            {user && (
+                <Link
+                    href="/create"
+                    className="w-full flex items-center justify-center gap-2 p-4 mb-6 rounded-2xl bg-gradient-to-r from-blue-600/20 to-pink-600/20 border border-white/10 hover:border-white/20 transition-all group"
+                >
+                    <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Plus className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="font-bold text-lg">Start New Argument</span>
+                </Link>
+            )}
 
             {loading && (
                 <div className="flex flex-col items-center justify-center p-12 text-white/50 space-y-4">
