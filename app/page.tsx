@@ -5,6 +5,20 @@ export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Fetch user profile for radius setting
+  let localRadius = 50 // Default
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('local_radius')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.local_radius) {
+      localRadius = profile.local_radius
+    }
+  }
+
   return (
     <main className="min-h-screen flex flex-col items-center pt-16 bg-gradient-to-br from-slate-900 to-slate-950 text-white relative overflow-x-hidden">
 
@@ -19,7 +33,7 @@ export default async function Home() {
         An anonymous consensus engine to measure local public opinions. Who do you side with?
       </p>
 
-      <FeedList user={user} />
+      <FeedList user={user} localRadius={localRadius} />
 
     </main>
   )

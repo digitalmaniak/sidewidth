@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
-import { ArrowLeft, Clock, MessageSquare, ThumbsUp } from "lucide-react"
+import { ArrowLeft, Clock, MessageSquare, ThumbsUp, Settings } from "lucide-react"
+import { RadiusSlider } from "@/components/features/radius-slider"
 
 async function getProfileData(userId: string) {
     const supabase = await createClient()
@@ -12,6 +13,13 @@ async function getProfileData(userId: string) {
         .select('*')
         .eq('created_by', userId)
         .order('created_at', { ascending: false })
+
+    // Fetch Profile Settings
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('local_radius')
+        .eq('id', userId)
+        .single()
 
     // Fetch vote counts for created posts
     const createdPostIds = createdPosts?.map(p => p.id) || []
@@ -88,7 +96,8 @@ async function getProfileData(userId: string) {
 
     return {
         createdPosts: createdPostsWithStats || [],
-        votes: votesWithStats
+        votes: votesWithStats,
+        localRadius: profile?.local_radius ?? 25
     }
 }
 
@@ -100,7 +109,7 @@ export default async function ProfilePage() {
         redirect("/login")
     }
 
-    const { createdPosts, votes } = await getProfileData(user.id)
+    const { createdPosts, votes, localRadius } = await getProfileData(user.id)
 
     // Calculate stats
     const totalCreated = createdPosts.length
@@ -144,6 +153,26 @@ export default async function ProfilePage() {
                         </div>
                         <div className="text-3xl font-bold text-white">{totalVotes}</div>
                         <div className="text-sm font-medium text-gray-400">Votes Cast</div>
+                    </div>
+                </div>
+
+
+
+                {/* Settings Section */}
+                <div className="mb-10">
+                    <div className="mb-4 flex items-center gap-2">
+                        <Settings className="h-5 w-5 text-gray-400" />
+                        <h2 className="text-xl font-bold text-gray-200">Settings</h2>
+                    </div>
+
+                    <div className="rounded-2xl border border-gray-800 bg-gray-900/50 p-6 backdrop-blur-sm">
+                        <div className="mb-4">
+                            <label className="text-sm font-medium text-gray-300">Local Radius</label>
+                            <p className="text-xs text-gray-500 mt-1">
+                                Distance for discovering arguments in your local feed.
+                            </p>
+                        </div>
+                        <RadiusSlider initialRadius={localRadius} />
                     </div>
                 </div>
 
@@ -284,6 +313,6 @@ export default async function ProfilePage() {
                     background: rgba(255, 255, 255, 0.2);
                 }
             `}</style>
-        </div>
+        </div >
     )
 }

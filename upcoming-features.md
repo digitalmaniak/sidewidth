@@ -35,5 +35,8 @@ Allow users to leave a single, short text explanation (140 chars) for *why* they
 ## 12. Trending / "Hot" Sorting
 Algorithm to surface arguments with the highest velocity of votes in the last hour, bubbling up controversial local topics.
 
-## 13. Load 10 posts at a time 
-Implement an infinite scroll to load 10 posts at a time, with a loading spinner to indicate when the next batch is loading.
+~~## 13. Load 10 posts at a time 
+Implement an infinite scroll to load 10 posts at a time, with a loading spinner to indicate when the next batch is loading.~~
+
+~~## 14. User Settings
+Allow users to customize their settings, including "local radius" (5km - 50km).~~

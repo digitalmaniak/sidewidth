@@ -5,7 +5,8 @@ create extension if not exists "uuid-ossp";
 create table profiles (
   id uuid references auth.users not null primary key,
   created_at timestamptz default now(),
-  karma int default 0
+  karma int default 0,
+  local_radius int default 25
 );
 -- RLS: Profiles are viewable by everyone, but only editable by the user.
 alter table profiles enable row level security;

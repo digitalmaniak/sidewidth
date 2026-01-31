@@ -262,3 +262,27 @@ export async function getPostById(id: string) {
         voteStdDev: stdDev
     }
 }
+
+export async function updateProfileRadius(radius: number) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        throw new Error("Must be logged in to update settings")
+    }
+
+    // Upsert profile just in case
+    await supabase.from('profiles').upsert({ id: user.id })
+
+    const { error } = await supabase
+        .from('profiles')
+        .update({ local_radius: radius })
+        .eq('id', user.id)
+
+    if (error) {
+        console.error("Error updating profile radius:", error)
+        throw new Error("Failed to update radius")
+    }
+
+    return { success: true }
+}

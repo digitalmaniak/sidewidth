@@ -12,9 +12,10 @@ import { cn } from "@/lib/utils"
 
 interface FeedListProps {
     user: User | null
+    localRadius: number
 }
 
-export function FeedList({ user }: FeedListProps) {
+export function FeedList({ user, localRadius }: FeedListProps) {
     const { coords, loading: locLoading, error: locError } = useLocation()
     const [posts, setPosts] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
@@ -43,7 +44,7 @@ export function FeedList({ user }: FeedListProps) {
                 setLoadingMore(false)
                 return
             }
-            getNearbyPosts(coords.latitude, coords.longitude, 50, pageNum, limit)
+            getNearbyPosts(coords.latitude, coords.longitude, localRadius, pageNum, limit)
                 .then(data => {
                     if (data.length < limit) setHasMore(false)
                     setPosts(prev => isReset ? data : [...prev, ...data])
