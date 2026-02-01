@@ -15,9 +15,26 @@ interface FeedListProps {
     localRadius: number
 }
 
+interface PostWithStats {
+    id: string
+    created_at: string
+    created_by: string | null
+    side_a: string
+    side_b: string
+    category: string
+    lat: number | null
+    long: number | null
+    location_name: string | null
+    voteCount: number
+    voteAverage: number
+    voteStdDev: number
+    dist_meters: number
+    userVote: number
+}
+
 export function FeedList({ user, localRadius }: FeedListProps) {
     const { coords, loading: locLoading, error: locError } = useLocation()
-    const [posts, setPosts] = useState<any[]>([])
+    const [posts, setPosts] = useState<PostWithStats[]>([])
     const [loading, setLoading] = useState(true)
     const [loadingMore, setLoadingMore] = useState(false)
     const [feedType, setFeedType] = useState<'global' | 'local'>('global')
@@ -51,7 +68,7 @@ export function FeedList({ user, localRadius }: FeedListProps) {
                     setPosts(prev => {
                         if (isReset) return data
                         const existingIds = new Set(prev.map(p => p.id))
-                        const newPosts = data.filter(p => !existingIds.has(p.id))
+                        const newPosts = data.filter((p: PostWithStats) => !existingIds.has(p.id))
                         return [...prev, ...newPosts]
                     })
                 })
@@ -67,7 +84,7 @@ export function FeedList({ user, localRadius }: FeedListProps) {
                         if (isReset) return data
                         // Deduplicate based on ID
                         const existingIds = new Set(prev.map(p => p.id))
-                        const newPosts = data.filter(p => !existingIds.has(p.id))
+                        const newPosts = data.filter((p: PostWithStats) => !existingIds.has(p.id))
                         return [...prev, ...newPosts]
                     })
                 })
