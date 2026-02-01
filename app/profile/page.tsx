@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
 import { ArrowLeft, Clock, MessageSquare, ThumbsUp, Settings } from "lucide-react"
 import { RadiusSlider } from "@/components/features/radius-slider"
+import { InterestsSettings } from "@/components/features/interests-settings"
 
 async function getProfileData(userId: string) {
     const supabase = await createClient()
@@ -17,7 +18,7 @@ async function getProfileData(userId: string) {
     // Fetch Profile Settings
     const { data: profile } = await supabase
         .from('profiles')
-        .select('local_radius')
+        .select('local_radius, interests')
         .eq('id', userId)
         .single()
 
@@ -97,7 +98,8 @@ async function getProfileData(userId: string) {
     return {
         createdPosts: createdPostsWithStats || [],
         votes: votesWithStats,
-        localRadius: profile?.local_radius ?? 25
+        localRadius: profile?.local_radius ?? 25,
+        interests: profile?.interests ?? null
     }
 }
 
@@ -109,7 +111,7 @@ export default async function ProfilePage() {
         redirect("/login")
     }
 
-    const { createdPosts, votes, localRadius } = await getProfileData(user.id)
+    const { createdPosts, votes, localRadius, interests } = await getProfileData(user.id)
 
     // Calculate stats
     const totalCreated = createdPosts.length
@@ -173,6 +175,10 @@ export default async function ProfilePage() {
                             </p>
                         </div>
                         <RadiusSlider initialRadius={localRadius} />
+                    </div>
+
+                    <div className="rounded-2xl border border-gray-800 bg-gray-900/50 p-6 backdrop-blur-sm mt-4">
+                        <InterestsSettings initialInterests={interests} />
                     </div>
                 </div>
 

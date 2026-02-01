@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { useLocation } from "@/lib/hooks/use-location"
-import { getAllPosts, getNearbyPosts } from "@/lib/actions"
+import { getAllPosts, getNearbyPosts, SortOption } from "@/lib/actions"
 import { GlassCard } from "@/components/ui/glass-card"
 import { VoteSlider } from "@/components/features/vote-slider"
-import { Loader2, MapPin, Globe, Plus } from "lucide-react"
+import { Loader2, MapPin, Globe, Plus, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { User } from "@supabase/supabase-js"
 import { cn } from "@/lib/utils"
@@ -21,17 +21,18 @@ export function FeedList({ user, localRadius }: FeedListProps) {
     const [loading, setLoading] = useState(true)
     const [loadingMore, setLoadingMore] = useState(false)
     const [feedType, setFeedType] = useState<'global' | 'local'>('global')
+    const [sortBy, setSortBy] = useState<SortOption>('latest')
     const [page, setPage] = useState(1)
     const [hasMore, setHasMore] = useState(true)
 
-    // Reset pagination when switching feed type
+    // Reset pagination when switching feed type or sort
     useEffect(() => {
         setPosts([])
         setPage(1)
         setHasMore(true)
         setLoading(true)
         fetchPosts(1, true)
-    }, [feedType, coords])
+    }, [feedType, coords, sortBy])
 
     const fetchPosts = (pageNum: number, isReset: boolean) => {
         if (!isReset) setLoadingMore(true)
@@ -44,20 +45,31 @@ export function FeedList({ user, localRadius }: FeedListProps) {
                 setLoadingMore(false)
                 return
             }
-            getNearbyPosts(coords.latitude, coords.longitude, localRadius, pageNum, limit)
+            getNearbyPosts(coords.latitude, coords.longitude, localRadius, pageNum, limit, sortBy)
                 .then(data => {
                     if (data.length < limit) setHasMore(false)
-                    setPosts(prev => isReset ? data : [...prev, ...data])
+                    setPosts(prev => {
+                        if (isReset) return data
+                        const existingIds = new Set(prev.map(p => p.id))
+                        const newPosts = data.filter(p => !existingIds.has(p.id))
+                        return [...prev, ...newPosts]
+                    })
                 })
                 .finally(() => {
                     setLoading(false)
                     setLoadingMore(false)
                 })
         } else {
-            getAllPosts(pageNum, limit)
+            getAllPosts(pageNum, limit, sortBy)
                 .then(data => {
                     if (data.length < limit) setHasMore(false)
-                    setPosts(prev => isReset ? data : [...prev, ...data])
+                    setPosts(prev => {
+                        if (isReset) return data
+                        // Deduplicate based on ID
+                        const existingIds = new Set(prev.map(p => p.id))
+                        const newPosts = data.filter(p => !existingIds.has(p.id))
+                        return [...prev, ...newPosts]
+                    })
                 })
                 .finally(() => {
                     setLoading(false)
@@ -85,7 +97,7 @@ export function FeedList({ user, localRadius }: FeedListProps) {
         return () => {
             if (sentinel) observer.unobserve(sentinel)
         }
-    }, [hasMore, loading, loadingMore, page, feedType])
+    }, [hasMore, loading, loadingMore, page, feedType, sortBy])
 
     // Reload single post logic for voting updates (optional optimization: update local state instead of refetch)
     const refreshPost = (postId: string) => {
@@ -100,13 +112,14 @@ export function FeedList({ user, localRadius }: FeedListProps) {
 
     return (
         <div className="space-y-6 w-full max-w-2xl px-4 pb-24">
-            {/* Feed Toggle */}
-            <div className="flex justify-center mb-8">
+            {/* Header Controls */}
+            <div className="flex justify-between items-center mb-8">
+                {/* Left Aligned Toggle */}
                 <div className="flex bg-black/20 backdrop-blur-md p-1 rounded-full border border-white/5">
                     <button
                         onClick={() => setFeedType('global')}
                         className={cn(
-                            "flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all",
+                            "flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all",
                             feedType === 'global'
                                 ? "bg-white/10 text-white shadow-lg border border-white/10"
                                 : "text-white/40 hover:text-white/60"
@@ -118,7 +131,7 @@ export function FeedList({ user, localRadius }: FeedListProps) {
                     <button
                         onClick={() => setFeedType('local')}
                         className={cn(
-                            "flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all",
+                            "flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all",
                             feedType === 'local'
                                 ? "bg-white/10 text-white shadow-lg border border-white/10"
                                 : "text-white/40 hover:text-white/60"
@@ -127,6 +140,23 @@ export function FeedList({ user, localRadius }: FeedListProps) {
                         <MapPin className="h-3 w-3" />
                         Local
                     </button>
+                </div>
+
+                {/* Right Aligned Sorting Dropdown */}
+                <div className="relative group">
+                    <div className="flex items-center gap-2 bg-black/20 backdrop-blur-md px-4 py-3 rounded-full border border-white/5 text-xs font-bold uppercase tracking-wider text-white cursor-pointer hover:bg-white/5 transition-colors">
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value as SortOption)}
+                            className="appearance-none bg-transparent border-none outline-none cursor-pointer pr-6 text-right"
+                        >
+                            <option value="latest" className="text-black">Latest</option>
+                            <option value="trending" className="text-black">Trending</option>
+                            <option value="divided" className="text-black">Divided</option>
+                            <option value="consensus" className="text-black">Consensus</option>
+                        </select>
+                        <ChevronDown className="h-3 w-3 absolute right-3 pointer-events-none opacity-50" />
+                    </div>
                 </div>
             </div>
 

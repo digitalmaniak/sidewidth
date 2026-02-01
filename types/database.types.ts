@@ -15,18 +15,21 @@ export interface Database {
                     created_at: string
                     karma: number
                     local_radius: number
+                    interests: string[] | null
                 }
                 Insert: {
                     id: string
                     created_at?: string
                     karma?: number
                     local_radius?: number
+                    interests?: string[] | null
                 }
                 Update: {
                     id?: string
                     created_at?: string
                     karma?: number
                     local_radius?: number
+                    interests?: string[] | null
                 }
             }
             posts: {

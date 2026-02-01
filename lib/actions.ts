@@ -2,17 +2,22 @@
 
 import { createClient } from "@/lib/supabase/server"
 
-export async function getNearbyPosts(lat: number, long: number, distKm: number = 50, page: number = 1, limit: number = 10) {
+export type SortOption = 'latest' | 'trending' | 'divided' | 'consensus'
+
+export async function getNearbyPosts(lat: number, long: number, distKm: number = 50, page: number = 1, limit: number = 10, sortBy: SortOption = 'latest') {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     const start = (page - 1) * limit
     const end = start + limit - 1
 
-    const { data: posts, error } = await supabase.rpc('get_nearby_posts', {
+    // Use the v2 RPC that supports sorting
+    const { data: posts, error } = await supabase.rpc('get_nearby_posts_v2', {
         user_lat: lat,
         user_long: long,
-        dist_km: distKm
+        dist_km: distKm,
+        sort_by: sortBy,
+        min_lat: -90, max_lat: 90, min_long: -180, max_long: 180 // Placeholder for bound optimization
     })
         .range(start, end)
 
@@ -25,63 +30,102 @@ export async function getNearbyPosts(lat: number, long: number, distKm: number =
         return []
     }
 
-    const postIds = posts.map((p: any) => p.id)
+    // Filter by interests (in-memory as per previous logic, ideally should be in DB)
+    let filteredPosts = posts
+    if (user) {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('interests')
+            .eq('id', user.id)
+            .single()
 
-    // Fetch votes for these posts
-    const { data: votes } = await supabase
-        .from('votes')
-        .select('post_id, value, user_id')
-        .in('post_id', postIds)
-
-    // Calculate stats per post
-    const postStats = new Map<string, { count: number, sum: number, sqSum: number }>()
-    const userVotesMap = new Map<string, number>()
-
-    if (votes) {
-        votes.forEach(v => {
-            // Stats
-            const stats = postStats.get(v.post_id) || { count: 0, sum: 0, sqSum: 0 }
-            stats.count++
-            stats.sum += v.value
-            stats.sqSum += v.value * v.value
-            postStats.set(v.post_id, stats)
-
-            // User vote
-            if (user && v.user_id === user.id) {
-                userVotesMap.set(v.post_id, v.value)
-            }
-        })
+        const interests = profile?.interests
+        if (interests !== null && interests !== undefined && interests.length > 0) {
+            filteredPosts = posts.filter((p: any) => interests.includes(p.category))
+        }
     }
 
-    return posts.map((post: any) => {
-        const stats = postStats.get(post.id) || { count: 0, sum: 0, sqSum: 0 }
-        const average = stats.count > 0 ? stats.sum / stats.count : 0
-        const variance = stats.count > 0 ? (stats.sqSum / stats.count) - (average * average) : 0
-        const stdDev = Math.sqrt(Math.max(0, variance))
+    // Since RPC returns stats, we just need to attach userVote.
+    // We can fetch user votes for these posts.
+    const postIds = filteredPosts.map((p: any) => p.id)
 
-        return {
-            ...post,
-            userVote: userVotesMap.get(post.id) || 0,
-            voteCount: stats.count,
-            voteAverage: average,
-            voteStdDev: stdDev
+    const userVotesMap = new Map<string, number>()
+    if (user && postIds.length > 0) {
+        const { data: votes } = await supabase
+            .from('votes')
+            .select('post_id, value')
+            .eq('user_id', user.id)
+            .in('post_id', postIds)
+
+        if (votes) {
+            votes.forEach(v => userVotesMap.set(v.post_id, v.value))
         }
-    })
+    }
+
+    return filteredPosts.map((post: any) => ({
+        ...post,
+        userVote: userVotesMap.get(post.id) || 0,
+        // Stats are already in `post` from the view/RPC
+        voteCount: post.vote_count,
+        voteAverage: post.vote_average,
+        voteStdDev: post.vote_stddev
+    }))
 }
 
-export async function getAllPosts(page: number = 1, limit: number = 10) {
+export async function getAllPosts(page: number = 1, limit: number = 10, sortBy: SortOption = 'latest') {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     const start = (page - 1) * limit
     const end = start + limit - 1
 
-    // Fetch posts
-    const { data: posts, error } = await supabase
-        .from('posts')
+    // Fetch user interests
+    let interests: string[] | null = null
+    if (user) {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('interests')
+            .eq('id', user.id)
+            .single()
+        interests = profile?.interests
+    }
+
+    // Query the VIEW instead of raw table
+    let query = supabase
+        .from('post_stats_view')
         .select('*')
-        .order('created_at', { ascending: false })
-        .range(start, end)
+
+    // Sorting
+    switch (sortBy) {
+        case 'trending':
+            // Added id tiebreaker
+            query = query.order('trending_score', { ascending: false }).order('created_at', { ascending: false }).order('id', { ascending: true })
+            break
+        case 'divided':
+            // SideWidth > 50, highest to lowest, at least 2 votes
+            query = query.gte('vote_count', 2).gt('vote_stddev', 50).order('vote_stddev', { ascending: false }).order('vote_count', { ascending: false }).order('id', { ascending: true })
+            break
+        case 'consensus':
+            // SideWidth < 50, lowest to highest, at least 2 votes
+            query = query.gte('vote_count', 2).lt('vote_stddev', 50).order('vote_stddev', { ascending: true }).order('vote_count', { ascending: false }).order('id', { ascending: true })
+            break
+        case 'latest':
+        default:
+            query = query.order('created_at', { ascending: false }).order('id', { ascending: true })
+            break
+    }
+
+    // Filter
+    // Bypass filter if sortBy is 'latest' to ensure all posts are shown
+    if (sortBy !== 'latest' && interests !== null && interests !== undefined) {
+        if (interests.length === 0) {
+            return []
+        } else {
+            query = query.in('category', interests)
+        }
+    }
+
+    const { data: posts, error } = await query.range(start, end)
 
     if (error) {
         console.error('Error fetching all posts:', error)
@@ -92,50 +136,33 @@ export async function getAllPosts(page: number = 1, limit: number = 10) {
         return []
     }
 
+    // Attach User Vote
     const postIds = posts.map((p: any) => p.id)
-
-    // Fetch votes for these posts ONLY
-    const { data: votes } = await supabase
-        .from('votes')
-        .select('post_id, value, user_id')
-        .in('post_id', postIds)
-
-    // Calculate stats per post
-    const postStats = new Map<string, { count: number, sum: number, sqSum: number }>()
     const userVotesMap = new Map<string, number>()
 
-    if (votes) {
-        votes.forEach(v => {
-            const stats = postStats.get(v.post_id) || { count: 0, sum: 0, sqSum: 0 }
-            stats.count++
-            stats.sum += v.value
-            stats.sqSum += v.value * v.value
-            postStats.set(v.post_id, stats)
+    if (user && postIds.length > 0) {
+        const { data: votes } = await supabase
+            .from('votes')
+            .select('post_id, value')
+            .eq('user_id', user.id)
+            .in('post_id', postIds)
 
-            if (user && v.user_id === user.id) {
-                userVotesMap.set(v.post_id, v.value)
-            }
-        })
+        if (votes) {
+            votes.forEach(v => userVotesMap.set(v.post_id, v.value))
+        }
     }
 
-    return posts.map(post => {
-        const stats = postStats.get(post.id) || { count: 0, sum: 0, sqSum: 0 }
-        const average = stats.count > 0 ? stats.sum / stats.count : 0
-
-        // Variance = (SumSQ / N) - (Mean^2)
-        // StdDev = Sqrt(Variance)
-        const variance = stats.count > 0 ? (stats.sqSum / stats.count) - (average * average) : 0
-        const stdDev = Math.sqrt(Math.max(0, variance)) // Ensure non-negative
-
-        return {
-            ...post,
-            dist_meters: 0,
-            userVote: userVotesMap.get(post.id) || 0,
-            voteCount: stats.count,
-            voteAverage: average,
-            voteStdDev: stdDev
-        }
-    })
+    return posts.map((post: any) => ({
+        ...post,
+        dist_meters: 0,
+        userVote: userVotesMap.get(post.id) || 0,
+        // View returns snake_case, map to camelCase if needed, or component uses snake?
+        // Component uses `voteAverage`, `voteStdDev`.
+        // The view columns are `vote_average` etc.
+        voteCount: post.vote_count,
+        voteAverage: post.vote_average,
+        voteStdDev: post.vote_stddev
+    }))
 }
 
 export async function submitVote(postId: string, value: number) {
@@ -282,6 +309,30 @@ export async function updateProfileRadius(radius: number) {
     if (error) {
         console.error("Error updating profile radius:", error)
         throw new Error("Failed to update radius")
+    }
+
+    return { success: true }
+}
+
+export async function updateProfileInterests(interests: string[]) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        throw new Error("Must be logged in to update settings")
+    }
+
+    // Upsert profile just in case
+    await supabase.from('profiles').upsert({ id: user.id })
+
+    const { error } = await supabase
+        .from('profiles')
+        .update({ interests })
+        .eq('id', user.id)
+
+    if (error) {
+        console.error("Error updating profile interests:", error)
+        throw new Error("Failed to update interests")
     }
 
     return { success: true }

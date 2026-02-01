@@ -1,6 +1,7 @@
 'use client'
 
 import { createPost } from '@/app/actions'
+import { CATEGORIES } from '@/lib/constants'
 import { useEffect, useState, Suspense } from 'react'
 import { Loader2, MapPin } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
@@ -88,13 +89,11 @@ function CreateForm() {
                         className="block w-full rounded-xl border-white/10 bg-black/20 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent sm:text-sm sm:leading-6 px-4 py-3"
                     >
                         <option value="" className="bg-slate-900">Select a category</option>
-                        <option value="Politics" className="bg-slate-900">Politics</option>
-                        <option value="Sports" className="bg-slate-900">Sports</option>
-                        <option value="Entertainment" className="bg-slate-900">Entertainment</option>
-                        <option value="Technology" className="bg-slate-900">Technology</option>
-                        <option value="Food" className="bg-slate-900">Food</option>
-                        <option value="Philosophy" className="bg-slate-900">Philosophy</option>
-                        <option value="Other" className="bg-slate-900">Other</option>
+                        {CATEGORIES.map((cat) => (
+                            <option key={cat} value={cat} className="bg-slate-900">
+                                {cat}
+                            </option>
+                        ))}
                     </select>
                 </div>
 

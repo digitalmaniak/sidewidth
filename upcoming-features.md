@@ -32,7 +32,7 @@ Allow users to filter the Global/Local feed by specific categories (e.g., "Show 
 ## 11. "Two Cents" (Optional Reasoning)
 Allow users to leave a single, short text explanation (140 chars) for *why* they picked a side, viewable only after voting.
 
-## 12. Trending / "Hot" Sorting
+## 12. Sorting: Latest, Trending / "Hot", Most Polarizing, Most Agreeable.
 Algorithm to surface arguments with the highest velocity of votes in the last hour, bubbling up controversial local topics.
 
 ~~## 13. Load 10 posts at a time 
@@ -40,3 +40,19 @@ Implement an infinite scroll to load 10 posts at a time, with a loading spinner 
 
 ~~## 14. User Settings
 Allow users to customize their settings, including "local radius" (5km - 50km).~~
+
+
+## 15. Allow the user to delete posts they have created
+Users should have the ability to remove posts they've made.
+
+## 16. Report button on individual post pages
+Users should have the ability to report posts they find offensive or inappropriate. The report is sent as an email to the admin [digitalmaniak@gmail.com] with a link to the post.
+
+## 17. Add the ability to leave a comment when voting on a post
+Users should have the ability to leave a comment when voting on a post. The comment can only be left in side the individual post page. the user can see their own comments within their post. leave an idicator in the profile page under the posts created box. ONLY the creator of the post can see all the comments left by all the voters.
+
+~~## 18. Settings: Interests
+Users should have the ability to select their interests, and the feed should be filtered by their interests. (by default all interests are selected, checkboxes)~~
+
+
+
