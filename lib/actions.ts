@@ -40,8 +40,12 @@ export async function getNearbyPosts(lat: number, long: number, distKm: number =
             .single()
 
         const interests = profile?.interests
-        if (interests !== null && interests !== undefined && interests.length > 0) {
-            filteredPosts = posts.filter((p: any) => interests.includes(p.category))
+        if (interests !== null && interests !== undefined) {
+            if (interests.length === 0) {
+                filteredPosts = []
+            } else {
+                filteredPosts = posts.filter((p: any) => interests.includes(p.category))
+            }
         }
     }
 
@@ -117,7 +121,8 @@ export async function getAllPosts(page: number = 1, limit: number = 10, sortBy: 
 
     // Filter
     // Bypass filter if sortBy is 'latest' to ensure all posts are shown
-    if (sortBy !== 'latest' && interests !== null && interests !== undefined) {
+    // Filter
+    if (interests !== null && interests !== undefined) {
         if (interests.length === 0) {
             return []
         } else {
