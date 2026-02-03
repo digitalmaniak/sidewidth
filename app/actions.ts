@@ -68,6 +68,7 @@ export async function createPost(formData: FormData) {
     const side_a = formData.get('side_a') as string
     const side_b = formData.get('side_b') as string
     const category = formData.get('category') as string
+    const description = formData.get('description') as string
 
     // Parse location if available
     const latStr = formData.get('lat') as string
@@ -132,7 +133,8 @@ export async function createPost(formData: FormData) {
             created_by: user.id,
             lat,
             long,
-            location_name
+            location_name,
+            description
         })
 
     if (error) {

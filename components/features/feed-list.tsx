@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { useLocation } from "@/lib/hooks/use-location"
 import { getAllPosts, getNearbyPosts, SortOption } from "@/lib/actions"
 import { GlassCard } from "@/components/ui/glass-card"
@@ -25,6 +26,7 @@ interface PostWithStats {
     lat: number | null
     long: number | null
     location_name: string | null
+    description: string | null
     voteCount: number
     voteAverage: number
     voteStdDev: number
@@ -33,6 +35,7 @@ interface PostWithStats {
 }
 
 export function FeedList({ user, localRadius }: FeedListProps) {
+    const router = useRouter()
     const { coords, loading: locLoading, error: locError } = useLocation()
     const [posts, setPosts] = useState<PostWithStats[]>([])
     const [loading, setLoading] = useState(true)
@@ -212,37 +215,7 @@ export function FeedList({ user, localRadius }: FeedListProps) {
             )}
 
             {posts.map((post) => (
-                <GlassCard key={post.id} className="animate-in-fade relative group/card">
-                    {/* Clickable Header Area */}
-                    <Link href={`/post/${post.id}?source=feed`} className="block mb-6 text-center hover:opacity-80 transition-opacity">
-                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/5 text-white/60 mb-2 uppercase tracking-wider border border-white/5">
-                            {post.category}
-                        </span>
-                        <h3 className="text-xl font-bold flex items-center justify-center gap-2">
-                            {post.side_a} <span className="text-white/30 text-sm">vs</span> {post.side_b}
-                        </h3>
-                        <p className="text-xs text-white/40 mt-1">
-                            {post.dist_meters > 0 ? `${Math.round(post.dist_meters / 1000)}km away • ` : ''}{post.location_name || 'Unknown Location'}
-                        </p>
-                    </Link>
-
-                    <VoteSlider
-                        postId={post.id}
-                        sideA={post.side_a}
-                        sideB={post.side_b}
-                        initialValue={post.userVote || 0}
-                        onCommit={(val) => {
-                            console.log(`Voted ${val} on ${post.id}`)
-                            // We can't easily refresh the whole list without losing scroll position.
-                            // Ideally, we'd update the specific post in state here.
-                            refreshPost(post.id)
-                        }}
-                        disabled={!user}
-                        average={post.voteAverage}
-                        stdDev={post.voteStdDev}
-                        count={post.voteCount}
-                    />
-                </GlassCard>
+                <FeedPostCard key={post.id} post={post} user={user} refreshPost={refreshPost} />
             ))}
 
             {/* Sentinel for Infinite Scroll */}
@@ -253,5 +226,66 @@ export function FeedList({ user, localRadius }: FeedListProps) {
                 </div>
             )}
         </div>
+    )
+}
+
+function FeedPostCard({ post, user, refreshPost }: { post: PostWithStats, user: User | null, refreshPost: (id: string) => void }) {
+    const router = useRouter()
+    const isDraggingRef = useRef(false)
+
+    const handleCardClick = () => {
+        if (!isDraggingRef.current) {
+            router.push(`/post/${post.id}?source=feed`)
+        }
+    }
+
+    return (
+        <GlassCard
+            className="animate-in-fade relative group/card cursor-pointer transition-colors hover:bg-white/5"
+            onClick={handleCardClick}
+        >
+            {/* Header Area (formerly Link) */}
+            <div className="block mb-6 hover:opacity-80 transition-opacity">
+                <div className="flex justify-between items-center mb-4">
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/5 text-white/60 uppercase tracking-wider border border-white/5">
+                        {post.category}
+                    </span>
+                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider flex items-center">
+                        <MapPin className="h-3 w-3 mr-1 opacity-50" />
+                        {post.dist_meters > 0 ? `${Math.round(post.dist_meters / 1000)}km • ` : ''}{post.location_name || 'Global'}
+                    </span>
+                </div>
+
+                {post.description && (
+                    <p className="text-center text-sm text-white/60 px-4 font-normal">
+                        {post.description.length > 150 ? (
+                            <>
+                                {post.description.slice(0, 150)}... <span className="text-blue-400 hover:underline">Read More</span>
+                            </>
+                        ) : (
+                            post.description
+                        )}
+                    </p>
+                )}
+            </div>
+
+            <VoteSlider
+                postId={post.id}
+                sideA={post.side_a}
+                sideB={post.side_b}
+                initialValue={post.userVote || 0}
+                onCommit={(val) => {
+                    console.log(`Voted ${val} on ${post.id}`)
+                    refreshPost(post.id)
+                }}
+                disabled={!user}
+                average={post.voteAverage}
+                stdDev={post.voteStdDev}
+                count={post.voteCount}
+                onDragStateChange={(isDragging) => {
+                    isDraggingRef.current = isDragging
+                }}
+            />
+        </GlassCard>
     )
 }

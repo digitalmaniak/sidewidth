@@ -40,17 +40,26 @@ export default async function Page({
             </Link>
 
             <GlassCard className="max-w-2xl w-full animate-in-fade">
-                <div className="mb-6 text-center">
-                    <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/5 text-white/60 mb-2 uppercase tracking-wider border border-white/5">
-                        {post.category}
-                    </span>
-                    <h1 className="text-2xl font-bold flex items-center justify-center gap-2 mb-2">
-                        {post.side_a} <span className="text-white/30 text-sm">vs</span> {post.side_b}
-                    </h1>
-                    <p className="text-xs text-white/40 mt-1 flex items-center justify-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {post.location_name || 'Unknown Location'}
-                    </p>
+                <div className="mb-8">
+                    <div className="flex justify-between items-center mb-6">
+                        <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-white/5 text-white/60 uppercase tracking-wider border border-white/5">
+                            {post.category}
+                        </span>
+                        <span className="text-xs font-bold text-white/40 uppercase tracking-wider flex items-center">
+                            <MapPin className="h-3 w-3 mr-1 opacity-50" />
+                            {post.location_name || 'Global'}
+                        </span>
+                    </div>
+
+                    {post.description ? (
+                        <p className="text-left text-sm text-white/80 leading-relaxed font-light px-4">
+                            {post.description}
+                        </p>
+                    ) : (
+                        <h1 className="text-3xl font-bold flex items-center justify-center gap-2 mb-2">
+                            {post.side_a} <span className="text-white/30 text-lg">vs</span> {post.side_b}
+                        </h1>
+                    )}
                 </div>
 
                 <VoteSlider

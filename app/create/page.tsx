@@ -13,6 +13,8 @@ function CreateForm() {
     const [location, setLocation] = useState<{ lat: number; long: number } | null>(null)
     const [locLoading, setLocLoading] = useState(true)
     const [locError, setLocError] = useState<string | null>(null)
+    const [sideA, setSideA] = useState('')
+    const [sideB, setSideB] = useState('')
 
     useEffect(() => {
         if (!navigator.geolocation) {
@@ -48,30 +50,51 @@ function CreateForm() {
                 <input type="hidden" name="lat" value={location?.lat || ''} />
                 <input type="hidden" name="long" value={location?.long || ''} />
 
+                <div className="space-y-2">
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-300">
+                        Description <span className="text-gray-500 text-xs font-normal ml-1">(Optional)</span>
+                    </label>
+                    <textarea
+                        name="description"
+                        id="description"
+                        rows={3}
+                        placeholder="What's the context? (Optional)"
+                        className="block w-full rounded-xl border-white/10 bg-black/20 text-white placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm sm:leading-6 px-4 py-3"
+                    />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <label htmlFor="side_a" className="block text-sm font-medium text-gray-300">
-                            Side A
+                        <label htmlFor="side_a" className="flex justify-between items-center text-sm font-medium text-gray-300">
+                            <span>Side A</span>
+                            <span className="text-gray-500 text-xs font-normal">limit: {32 - sideA.length}</span>
                         </label>
                         <input
                             type="text"
                             name="side_a"
                             id="side_a"
                             required
+                            maxLength={32}
+                            value={sideA}
+                            onChange={(e) => setSideA(e.target.value)}
                             placeholder="e.g. Cats"
                             className="block w-full rounded-xl border-white/10 bg-black/20 text-white placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-sm sm:leading-6 px-4 py-3"
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <label htmlFor="side_b" className="block text-sm font-medium text-gray-300">
-                            Side B
+                        <label htmlFor="side_b" className="flex justify-between items-center text-sm font-medium text-gray-300">
+                            <span>Side B</span>
+                            <span className="text-gray-500 text-xs font-normal">limit: {32 - sideB.length}</span>
                         </label>
                         <input
                             type="text"
                             name="side_b"
                             id="side_b"
                             required
+                            maxLength={32}
+                            value={sideB}
+                            onChange={(e) => setSideB(e.target.value)}
                             placeholder="e.g. Dogs"
                             className="block w-full rounded-xl border-white/10 bg-black/20 text-white placeholder:text-gray-500 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all sm:text-sm sm:leading-6 px-4 py-3"
                         />

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { motion, useMotionValue, useTransform, animate } from "framer-motion"
+import { motion, useMotionValue, useTransform, animate, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 
 import { submitVote } from "@/lib/actions"
@@ -16,6 +16,7 @@ interface VoteSliderProps {
     average?: number
     stdDev?: number
     count?: number
+    onDragStateChange?: (isDragging: boolean) => void
 }
 
 export function VoteSlider({
@@ -27,7 +28,8 @@ export function VoteSlider({
     disabled = false,
     average = 0,
     stdDev = 0,
-    count = 0
+    count = 0,
+    onDragStateChange
 }: VoteSliderProps) {
     // Initialize committed state if already voted
     const [committed, setCommitted] = React.useState(Math.abs(initialValue) > 0)
@@ -92,9 +94,14 @@ export function VoteSlider({
     const handleDragStart = () => {
         if (disabled || committed) return
         setPreCommitted(false)
+        if (onDragStateChange) onDragStateChange(true)
     }
 
     const handleDragEnd = async () => {
+        if (onDragStateChange) {
+            // Delay resetting drag state slightly to allow onClick to fire and be ignored
+            setTimeout(() => onDragStateChange(false), 50)
+        }
         if (disabled || committed) return
 
         const val = currentValue.get()
@@ -165,179 +172,190 @@ export function VoteSlider({
                 "flex justify-between text-sm font-bold tracking-widest uppercase text-foreground/80",
                 disabled && "opacity-50"
             )}>
-                <span className="text-blue-400">{sideA}</span>
-                <span className="text-pink-400">{sideB}</span>
+                <span className="text-blue-400 text-left">{sideA}</span>
+                <span className="text-pink-400 text-right">{sideB}</span>
             </div>
 
-            {/* Slider Track */}
+            {/* Slider Container - Defines the drag constraints area */}
             <div
                 ref={constraintsRef}
+                onClick={(e) => e.stopPropagation()}
                 className={cn(
-                    "relative h-16 w-full rounded-full glass-panel overflow-hidden transition-all duration-300",
-                    disabled ? "cursor-not-allowed opacity-50 grayscale" : "cursor-grab active:cursor-grabbing",
-                    (committed && !disabled) && "pointer-events-none", // Remove opacity-80 manually to handle glow brightness
-                    preCommitted && "ring-2 ring-white/50 ring-offset-2 ring-offset-transparent"
+                    "relative h-16 w-full z-10 touch-none", // heavy z-index? touch-none for gestures
+                    disabled && "cursor-not-allowed opacity-50 grayscale"
                 )}
             >
-                {/* Ruler Ticks */}
-                <div className="absolute inset-0 pointer-events-none z-0 opacity-30">
-                    {ticks.map(t => (
-                        <div
-                            key={t}
-                            className="absolute top-1/2 -translate-y-1/2 w-0.5 bg-white/40 h-3 rounded-full"
+                {/* Visual Track (Clipped) */}
+                <div className={cn(
+                    "absolute inset-0 rounded-full glass-panel overflow-hidden transition-all duration-300 pointer-events-none",
+                    // committed && !disabled && "opacity-100" // kept original logic intent?
+                )}>
+                    {/* Ruler Ticks */}
+                    <div className="absolute inset-0 pointer-events-none z-0 opacity-30">
+                        {ticks.map(t => (
+                            <div
+                                key={t}
+                                className="absolute top-1/2 -translate-y-1/2 w-0.5 bg-white/40 h-3 rounded-full"
+                                style={{
+                                    left: `${50 + (t / 2)}%`,
+                                }}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Center Indicator */}
+                    <div className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-0.5 h-6 bg-white/40 rounded-full z-0" />
+
+                    {/* Dynamic Fill Bar */}
+                    {(!committed || count <= 1) && (
+                        <motion.div
+                            className="absolute top-0 bottom-0 left-1/2 z-0"
                             style={{
-                                left: `${50 + (t / 2)}%`, // Map -100..100 to 0..100%. -75 -> 50 + (-37.5) = 12.5%
+                                backgroundColor: barColor,
+                                x: fillBarX,
+                                width: fillBarWidth,
                             }}
                         />
-                    ))}
+                    )}
+
+                    {/* SideWidth Glow Gradient */}
+                    {(committed && count > 1) && (
+                        <div className="absolute inset-y-0 w-full overflow-hidden pointer-events-none">
+                            {(() => {
+                                const getGlowColor = (avg: number) => {
+                                    const t = (avg + 100) / 200;
+                                    const blue = [59, 130, 246];
+                                    const white = [255, 255, 255];
+                                    const pink = [236, 72, 153];
+                                    let r, g, b;
+
+                                    if (t < 0.5) {
+                                        const localT = t * 2;
+                                        r = Math.round(blue[0] + (white[0] - blue[0]) * localT);
+                                        g = Math.round(blue[1] + (white[1] - blue[1]) * localT);
+                                        b = Math.round(blue[2] + (white[2] - blue[2]) * localT);
+                                    } else {
+                                        const localT = (t - 0.5) * 2;
+                                        r = Math.round(white[0] + (pink[0] - white[0]) * localT);
+                                        g = Math.round(white[1] + (pink[1] - white[1]) * localT);
+                                        b = Math.round(white[2] + (pink[2] - white[2]) * localT);
+                                    }
+                                    return `rgba(${r}, ${g}, ${b}, 0.6)`;
+                                };
+
+                                const glowColor = getGlowColor(average);
+
+                                return (
+                                    <>
+                                        <div
+                                            className="absolute top-0 bottom-0 blur-2xl rounded-full opacity-60"
+                                            style={{
+                                                left: `${glowCenterPct}%`,
+                                                width: `${Math.max(20, glowWidthPct * 2)}%`,
+                                                backgroundColor: glowColor,
+                                                transform: 'translateX(-50%)',
+                                            }}
+                                        />
+                                        <div
+                                            className="absolute top-0 bottom-0 blur-xl rounded-full"
+                                            style={{
+                                                left: `${glowCenterPct}%`,
+                                                width: `${glowWidthPct}%`,
+                                                backgroundColor: glowColor,
+                                                transform: 'translateX(-50%)', // Use CSS transform for static pos
+                                                boxShadow: `0 0 ${Math.min(50, glowWidthPct)}px ${glowColor}`
+                                            }}
+                                        />
+                                        <div
+                                            className="absolute top-0 bottom-0 bg-white blur-md mix-blend-overlay"
+                                            style={{
+                                                left: `${glowCenterPct}%`,
+                                                width: '8px',
+                                                transform: 'translateX(-50%)',
+                                                opacity: 0.9
+                                            }}
+                                        />
+                                        <div
+                                            className="absolute top-2 bottom-2 bg-white/90 rounded-full shadow-[0_0_10px_white]"
+                                            style={{
+                                                left: `${glowCenterPct}%`,
+                                                width: '2px',
+                                                transform: 'translateX(-50%)',
+                                            }}
+                                        />
+                                    </>
+                                );
+                            })()}
+                        </div>
+                    )}
                 </div>
 
-                {/* Center Indicator */}
-                <div className="absolute left-1/2 top-1/2 -translate-y-1/2 -translate-x-1/2 w-0.5 h-6 bg-white/40 rounded-full z-0" />
-
-                {/* Dynamic Fill Bar (Only show if NOT committed OR if count < 2 (user is the only one)) */}
-                {/* Actually, if committed and count > 1, we show glow instead. */}
-                {(!committed || count <= 1) && (
-                    <motion.div
-                        className="absolute top-0 bottom-0 left-1/2 z-0"
-                        style={{
-                            backgroundColor: barColor,
-                            x: fillBarX,
-                            width: fillBarWidth,
-                        }}
-                    />
-                )}
-
-                {/* SideWidth Glow Gradient (Only if committed and count > 1) */}
-                {(committed && count > 1) && (
-                    <div className="absolute inset-y-0 w-full overflow-hidden pointer-events-none">
-                        {/* 
-                            Dynamic Heatmap Color Calculation 
-                            -100 (Blue) -> 0 (White/Purpleish) -> 100 (Pink)
-                        */}
-                        {(() => {
-                            // Simple interpolation helper
-                            const getGlowColor = (avg: number) => {
-                                // Normalized -100..100 to 0..1
-                                const t = (avg + 100) / 200;
-
-                                // Colors (approx tailwind blue-500, white, pink-500)
-                                const blue = [59, 130, 246]; // #3b82f6
-                                const white = [255, 255, 255]; // #ffffff
-                                const pink = [236, 72, 153]; // #ec4899
-
-                                let r, g, b;
-
-                                if (t < 0.5) {
-                                    // Blue to White (adjusted t 0..1)
-                                    const localT = t * 2;
-                                    r = Math.round(blue[0] + (white[0] - blue[0]) * localT);
-                                    g = Math.round(blue[1] + (white[1] - blue[1]) * localT);
-                                    b = Math.round(blue[2] + (white[2] - blue[2]) * localT);
-                                } else {
-                                    // White to Pink (adjusted t 0..1)
-                                    const localT = (t - 0.5) * 2;
-                                    r = Math.round(white[0] + (pink[0] - white[0]) * localT);
-                                    g = Math.round(white[1] + (pink[1] - white[1]) * localT);
-                                    b = Math.round(white[2] + (pink[2] - white[2]) * localT);
-                                }
-
-                                return `rgba(${r}, ${g}, ${b}, 0.6)`;
-                            };
-
-                            const glowColor = getGlowColor(average);
-
-                            return (
-                                <>
-                                    {/* Broad ambient glow */}
-                                    <div
-                                        className="absolute top-0 bottom-0 blur-2xl rounded-full opacity-60"
-                                        style={{
-                                            left: `${glowCenterPct}%`,
-                                            width: `${Math.max(20, glowWidthPct * 2)}%`,
-                                            backgroundColor: glowColor,
-                                            transform: 'translateX(-50%)',
-                                        }}
-                                    />
-
-                                    {/* Main focused glow */}
-                                    <div
-                                        className="absolute top-0 bottom-0 blur-xl rounded-full"
-                                        style={{
-                                            left: `${glowCenterPct}%`,
-                                            width: `${glowWidthPct}%`,
-                                            backgroundColor: glowColor,
-                                            transform: 'translateX(-50%)',
-                                            boxShadow: `0 0 ${Math.min(50, glowWidthPct)}px ${glowColor}`
-                                        }}
-                                    />
-
-                                    {/* Hot white core */}
-                                    <div
-                                        className="absolute top-0 bottom-0 bg-white blur-md mix-blend-overlay"
-                                        style={{
-                                            left: `${glowCenterPct}%`,
-                                            width: '8px',
-                                            transform: 'translateX(-50%)',
-                                            opacity: 0.9
-                                        }}
-                                    />
-
-                                    {/* Sharp center line */}
-                                    <div
-                                        className="absolute top-2 bottom-2 bg-white/90 rounded-full shadow-[0_0_10px_white]"
-                                        style={{
-                                            left: `${glowCenterPct}%`,
-                                            width: '2px',
-                                            transform: 'translateX(-50%)',
-                                        }}
-                                    />
-                                </>
-                            );
-                        })()}
-                    </div>
-                )}
-
-
-                {/* Draggable Thumb */}
+                {/* Draggable Thumb & Confirm Button */}
+                {/* 
+                    We move the thumb OUT of the overflow-hidden track but keep it inside the relative container. 
+                    It shares the same coordinates system since the container is the same size.
+                */}
                 <motion.div
                     className={cn(
-                        "absolute top-1 left-1/2 -ml-7 h-14 w-14 rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.3)] flex items-center justify-center z-10",
-                        disabled && "shadow-none bg-white/50",
-                        preCommitted && "cursor-pointer",
-                        committed && "shadow-none bg-white/20 backdrop-blur-md border border-white/30" // Make thumb subtle when committed
+                        "absolute top-1 left-1/2 -ml-7 h-14 w-14 z-20 flex items-center justify-center",
+                        disabled ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing"
                     )}
-                    drag={disabled || committed ? false : "x"} // Disable drag if committed
+                    drag={disabled || committed ? false : "x"}
                     dragConstraints={dragConstraints}
-                    dragElastic={0.05} // Slightly less elastic at edges for stricter feel
+                    dragElastic={0.05}
                     dragMomentum={false}
                     style={{ x }}
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
-                    onTap={preCommitted ? confirmVote : undefined} // Only confirm on tap if pre-committed
                     whileHover={disabled ? {} : { scale: 1.1 }}
                     whileTap={disabled ? {} : { scale: 0.95 }}
-                    animate={
-                        committed ? { rotate: 90, scale: 0.8 } : // Shrink thumb when committed to emphasize glow
-                            preCommitted ? { scale: [1, 1.1, 1], transition: { repeat: Infinity, duration: 1.5 } } :
-                                { rotate: 0, scale: 1 }
-                    }
                 >
-                    {/* Visual indicator on thumb */}
+                    {/* The Thumb Itself */}
                     <motion.div
                         className={cn(
-                            "w-1 h-6 bg-slate-300 rounded-full transition-colors",
-                            (preCommitted || committed) && "bg-slate-400"
+                            "h-14 w-14 rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.3)] flex items-center justify-center",
+                            disabled && "shadow-none bg-white/50",
+                            committed && "shadow-none bg-white/20 backdrop-blur-md border border-white/30"
                         )}
-                        animate={committed ? { height: 14, width: 14, borderRadius: 4, opacity: 0.5 } : { height: 24, width: 4, borderRadius: 9999 }}
-                    />
+                        animate={
+                            committed ? { rotate: 90, scale: 0.8 } :
+                                { rotate: 0, scale: 1 }
+                        }
+                    >
+                        <motion.div
+                            className={cn(
+                                "w-1 h-6 bg-slate-300 rounded-full transition-colors",
+                                (preCommitted || committed) && "bg-slate-400"
+                            )}
+                            animate={committed ? { height: 14, width: 14, borderRadius: 4, opacity: 0.5 } : { height: 24, width: 4, borderRadius: 9999 }}
+                        />
+                    </motion.div>
+
+                    {/* Pop-out Confirm Button */}
+                    <AnimatePresence>
+                        {preCommitted && !committed && (
+                            <motion.button
+                                initial={{ opacity: 0, y: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, y: 60, scale: 1 }} // 60px down from center of thumb (thumb is 56px tall, so ~32px clearance)
+                                exit={{ opacity: 0, y: 20, scale: 0.8 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap px-4 py-2 bg-green-500 hover:bg-green-400 text-white text-sm font-bold rounded-full shadow-[0_0_20px_rgba(34,197,94,0.6)] border border-green-300 z-50 pointer-events-auto"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    confirmVote()
+                                }}
+                            >
+                                Confirm
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
             </div>
 
-            {/* Value Indicator (Optional, for feedback) */}
-            {/* Value Indicator (Optional, for feedback) */}
+
+            {/* Feedback Text */}
             <div className={cn(
-                "font-mono text-xs text-white/50 h-4 flex items-center w-full",
+                "font-mono text-xs text-white/50 h-4 flex items-center w-full transition-all",
                 (committed && count > 1) ? "justify-between px-1" : "justify-center"
             )}>
                 {disabled ? (
@@ -360,7 +378,7 @@ export function VoteSlider({
                         </>
                     )
                 ) : preCommitted ? (
-                    <span>Tap circle to confirm</span>
+                    <span></span> // Empty, because the button says Confirm now
                 ) : (
                     <span>Slide to vote</span>
                 )}
