@@ -172,7 +172,7 @@ export function FeedList({ user, localRadius }: FeedListProps) {
                         >
                             <option value="latest" className="text-black">Latest</option>
                             <option value="trending" className="text-black">Trending</option>
-                            <option value="divided" className="text-black">Divided</option>
+                            <option value="divided" className="text-black">Controversial</option>
                             <option value="consensus" className="text-black">Consensus</option>
                         </select>
                         <ChevronDown className="h-3 w-3 absolute right-3 pointer-events-none opacity-50" />
