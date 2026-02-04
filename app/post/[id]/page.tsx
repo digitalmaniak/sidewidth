@@ -5,6 +5,7 @@ import { VoteSlider } from "@/components/features/vote-slider"
 import { MapPin } from "lucide-react"
 import Link from "next/link"
 import { redirect } from "next/navigation"
+import { ShareButton } from "@/components/features/share-button"
 
 export default async function Page({
     params,
@@ -73,6 +74,10 @@ export default async function Page({
                     count={post.voteCount}
                 />
             </GlassCard>
+
+            <div className="max-w-2xl w-full flex justify-end mt-4">
+                <ShareButton url={`${process.env.NEXT_PUBLIC_APP_URL || 'https://sidewidth.com'}/post/${post.id}`} />
+            </div>
         </div>
     )
 }
