@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import HamburgerButton from "./hamburger-button";
-import { LogOut, Plus, User } from "lucide-react";
+import { LogOut, Plus, User, Home } from "lucide-react";
 import { signOut } from "@/app/actions";
 import { createPortal } from "react-dom";
 
@@ -37,6 +37,12 @@ export default function NavigationOverlay({ user }: { user: any }) {
 
     const menuItems = [
         {
+            href: "/",
+            label: "Home",
+            icon: Home,
+            color: "text-cyan-400"
+        },
+        {
             href: user ? "/create" : "/login",
             label: "New Argument",
             icon: Plus,
@@ -44,7 +50,7 @@ export default function NavigationOverlay({ user }: { user: any }) {
         },
         {
             href: "/profile",
-            label: "Profile & History",
+            label: "Settings & History",
             icon: User,
             color: "text-purple-400"
         }
