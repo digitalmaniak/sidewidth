@@ -292,13 +292,11 @@ export function VoteSlider({
                     {/* Average Indicator (Triangle + Text) - ONLY if results are shown */}
                     {((committed || disabled) && count > 1) && (
                         <div
-                            className="absolute -top-10 -translate-x-1/2 flex flex-col items-center pointer-events-none transition-all duration-500 z-30"
+                            className="absolute -top-5 -translate-x-1/2 flex flex-col items-center pointer-events-none transition-all duration-500 z-30"
                             style={{ left: `${glowCenterPct}%` }}
                         >
                             <span className="text-[10px] font-bold text-white/90 uppercase tracking-widest mb-1 shadow-black drop-shadow-md">Avg</span>
                             <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-white/90 drop-shadow-md" />
-                            {/* Vertical Line connecting to bar */}
-                            <div className="w-[1px] h-3 bg-white/50" />
                         </div>
                     )}
                 </div>
