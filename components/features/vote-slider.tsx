@@ -5,6 +5,7 @@ import { motion, useMotionValue, useTransform, animate, AnimatePresence } from "
 import { cn } from "@/lib/utils"
 
 import { submitVote } from "@/lib/actions"
+import Link from "next/link"
 
 interface VoteSliderProps {
     postId: string
@@ -366,14 +367,21 @@ export function VoteSlider({
             {/* Feedback Text */}
             <div className={cn(
                 "font-mono text-xs text-white/50 h-4 flex items-center w-full transition-all",
-                ((committed || disabled) && count > 1) ? "justify-between px-1" : "justify-center"
+                ((committed && count > 1) || disabled) ? "justify-between px-1" : "justify-center"
             )}>
                 {disabled ? (
-                    count <= 1 ? (
-                        <span>Login to vote</span>
-                    ) : (
-                        <>
+                    <>
+                        <span className="flex items-center gap-2">
                             <span>Votes: {count}</span>
+                            <Link
+                                href="/login"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-xs text-blue-400 hover:underline z-50 relative pointer-events-auto"
+                            >
+                                Login to vote
+                            </Link>
+                        </span>
+                        {count > 1 && (
                             <span>
                                 SideWidth: {stdDev.toFixed(1)} ({(() => {
                                     if (stdDev < 20) return "Tight Consensus"
@@ -383,8 +391,8 @@ export function VoteSlider({
                                     return "Strong Disagreement"
                                 })()})
                             </span>
-                        </>
-                    )
+                        )}
+                    </>
                 ) : committed ? (
                     count <= 1 ? (
                         <span>Waiting for more votes...</span>
