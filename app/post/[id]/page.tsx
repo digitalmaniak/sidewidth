@@ -56,11 +56,7 @@ export default async function Page({
                         <p className="text-left text-sm text-white/80 leading-relaxed font-light px-4">
                             {post.description}
                         </p>
-                    ) : (
-                        <h1 className="text-3xl font-bold flex items-center justify-center gap-2 mb-2">
-                            {post.side_a} <span className="text-white/30 text-lg">vs</span> {post.side_b}
-                        </h1>
-                    )}
+                    ) : null}
                 </div>
 
                 <VoteSlider
