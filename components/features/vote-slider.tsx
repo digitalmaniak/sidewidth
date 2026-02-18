@@ -219,7 +219,7 @@ export function VoteSlider({
                     )}
 
                     {/* SideWidth Glow Gradient */}
-                    {(committed && count > 1) && (
+                    {((committed || disabled) && count > 1) && (
                         <div className="absolute inset-y-0 w-full overflow-hidden pointer-events-none">
                             {(() => {
                                 const getGlowColor = (avg: number) => {
@@ -288,78 +288,103 @@ export function VoteSlider({
                             })()}
                         </div>
                     )}
+
+                    {/* Average Indicator (Triangle + Text) - ONLY if results are shown */}
+                    {((committed || disabled) && count > 1) && (
+                        <div
+                            className="absolute -top-10 -translate-x-1/2 flex flex-col items-center pointer-events-none transition-all duration-500 z-30"
+                            style={{ left: `${glowCenterPct}%` }}
+                        >
+                            <span className="text-[10px] font-bold text-white/90 uppercase tracking-widest mb-1 shadow-black drop-shadow-md">Avg</span>
+                            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-white/90 drop-shadow-md" />
+                            {/* Vertical Line connecting to bar */}
+                            <div className="w-[1px] h-3 bg-white/50" />
+                        </div>
+                    )}
                 </div>
 
                 {/* Draggable Thumb & Confirm Button */}
-                {/* 
-                    We move the thumb OUT of the overflow-hidden track but keep it inside the relative container. 
-                    It shares the same coordinates system since the container is the same size.
-                */}
-                <motion.div
-                    className={cn(
-                        "absolute top-1 left-1/2 -ml-7 h-14 w-14 z-20 flex items-center justify-center",
-                        disabled ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing"
-                    )}
-                    drag={disabled || committed ? false : "x"}
-                    dragConstraints={dragConstraints}
-                    dragElastic={0.05}
-                    dragMomentum={false}
-                    style={{ x }}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    whileHover={disabled ? {} : { scale: 1.1 }}
-                    whileTap={disabled ? {} : { scale: 0.95 }}
-                >
-                    {/* The Thumb Itself */}
+                {!disabled && (
                     <motion.div
                         className={cn(
-                            "h-14 w-14 rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.3)] flex items-center justify-center",
-                            disabled && "shadow-none bg-white/50",
-                            committed && "shadow-none bg-white/20 backdrop-blur-md border border-white/30"
+                            "absolute top-1 left-1/2 -ml-7 h-14 w-14 z-20 flex items-center justify-center",
+                            "cursor-grab active:cursor-grabbing"
                         )}
-                        animate={
-                            committed ? { rotate: 90, scale: 0.8 } :
-                                { rotate: 0, scale: 1 }
-                        }
+                        drag={committed ? false : "x"}
+                        dragConstraints={dragConstraints}
+                        dragElastic={0.05}
+                        dragMomentum={false}
+                        style={{ x }}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
                     >
+                        {/* The Thumb Itself */}
                         <motion.div
                             className={cn(
-                                "w-1 h-6 bg-slate-300 rounded-full transition-colors",
-                                (preCommitted || committed) && "bg-slate-400"
+                                "h-14 w-14 rounded-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.3)] flex items-center justify-center",
+                                committed && "shadow-none bg-white/20 backdrop-blur-md border border-white/30"
                             )}
-                            animate={committed ? { height: 14, width: 14, borderRadius: 4, opacity: 0.5 } : { height: 24, width: 4, borderRadius: 9999 }}
-                        />
-                    </motion.div>
+                            animate={
+                                committed ? { rotate: 90, scale: 0.8 } :
+                                    { rotate: 0, scale: 1 }
+                            }
+                        >
+                            <motion.div
+                                className={cn(
+                                    "w-1 h-6 bg-slate-300 rounded-full transition-colors",
+                                    (preCommitted || committed) && "bg-slate-400"
+                                )}
+                                animate={committed ? { height: 14, width: 14, borderRadius: 4, opacity: 0.5 } : { height: 24, width: 4, borderRadius: 9999 }}
+                            />
+                        </motion.div>
 
-                    {/* Pop-out Confirm Button */}
-                    <AnimatePresence>
-                        {preCommitted && !committed && (
-                            <motion.button
-                                initial={{ opacity: 0, y: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, y: 60, scale: 1 }} // 60px down from center of thumb (thumb is 56px tall, so ~32px clearance)
-                                exit={{ opacity: 0, y: 20, scale: 0.8 }}
-                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                                className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap px-4 py-2 bg-green-500 hover:bg-green-400 text-white text-sm font-bold rounded-full shadow-[0_0_20px_rgba(34,197,94,0.6)] border border-green-300 z-50 pointer-events-auto"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    confirmVote()
-                                }}
-                            >
-                                Confirm
-                            </motion.button>
-                        )}
-                    </AnimatePresence>
-                </motion.div>
+                        {/* Pop-out Confirm Button */}
+                        <AnimatePresence>
+                            {preCommitted && !committed && (
+                                <motion.button
+                                    initial={{ opacity: 0, y: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, y: 60, scale: 1 }} // 60px down from center of thumb (thumb is 56px tall, so ~32px clearance)
+                                    exit={{ opacity: 0, y: 20, scale: 0.8 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                    className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap px-4 py-2 bg-green-500 hover:bg-green-400 text-white text-sm font-bold rounded-full shadow-[0_0_20px_rgba(34,197,94,0.6)] border border-green-300 z-50 pointer-events-auto"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        confirmVote()
+                                    }}
+                                >
+                                    Confirm
+                                </motion.button>
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                )}
             </div>
 
 
             {/* Feedback Text */}
             <div className={cn(
                 "font-mono text-xs text-white/50 h-4 flex items-center w-full transition-all",
-                (committed && count > 1) ? "justify-between px-1" : "justify-center"
+                ((committed || disabled) && count > 1) ? "justify-between px-1" : "justify-center"
             )}>
                 {disabled ? (
-                    <span>Login to vote</span>
+                    count <= 1 ? (
+                        <span>Login to vote</span>
+                    ) : (
+                        <>
+                            <span>Votes: {count}</span>
+                            <span>
+                                SideWidth: {stdDev.toFixed(1)} ({(() => {
+                                    if (stdDev < 20) return "Tight Consensus"
+                                    if (stdDev < 40) return "General Consensus"
+                                    if (stdDev < 60) return "Mixed Opinions"
+                                    if (stdDev < 80) return "Divided"
+                                    return "Strong Disagreement"
+                                })()})
+                            </span>
+                        </>
+                    )
                 ) : committed ? (
                     count <= 1 ? (
                         <span>Waiting for more votes...</span>
