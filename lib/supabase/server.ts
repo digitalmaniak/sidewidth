@@ -1,13 +1,16 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import type { Database } from '@/types/database.types'
+import { sidewidthDbOptions } from '@/lib/supabase/options'
 
 export const createClient = async () => {
     const cookieStore = await cookies()
 
-    return createServerClient(
+    return createServerClient<Database, 'sidewidth'>(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
+            ...sidewidthDbOptions,
             cookies: {
                 getAll() {
                     return cookieStore.getAll()
