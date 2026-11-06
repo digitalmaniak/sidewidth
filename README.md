@@ -58,7 +58,9 @@ Ensure you have the following installed:
     NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
     NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
     ```
-    *You can find these keys in your Supabase project settings.*
+    *You can find these keys in your Supabase project settings. Use the publishable or anon key only. Do not put a service-role key in frontend env.*
+
+    Table, view, and RPC calls use the `sidewidth` schema (`db.schema` in `lib/supabase/options.ts`). Auth stays on Supabase Auth. Changing `NEXT_PUBLIC_SUPABASE_URL` does not select that schema.
 
 4.  **Run the development server:**
     ```bash

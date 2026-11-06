@@ -91,7 +91,7 @@ export async function getAllPosts(page: number = 1, limit: number = 10, sortBy: 
             .select('interests')
             .eq('id', user.id)
             .single()
-        interests = profile?.interests
+        interests = profile?.interests ?? null
     }
 
     // Query the VIEW instead of raw table
